@@ -1,0 +1,21 @@
+{
+  "name": "daisuhuynh",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "register": "node register.js",
+    "start": "node main.js"
+  },
+  "keywords": [],
+  "author": "Thiên Đạo Vô Trần",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^14.15.3"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
