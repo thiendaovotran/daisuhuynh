@@ -6,6 +6,8 @@ client.on(Events.ClientReady, () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
+const maxPartySize = 12;
+
 client.on(Events.InteractionCreate, async interaction => {
 
   const commandUserNickname = interaction.member.nickname;
@@ -67,6 +69,11 @@ client.on(Events.InteractionCreate, async interaction => {
 
           if (buttonName === 'btnAccept') {
 
+            if (registered.size >= 12) {
+              i.reply({ content: `${collectorUserNickname} ơi tổ đội đã đủ người rồi`, ephemeral: true });
+              return;
+            }
+
             if (registered.has(collectorUserId)) {
               i.reply({ content: 'Bạn đã tham gia rồi', ephemeral: true });
               return;
@@ -82,12 +89,14 @@ client.on(Events.InteractionCreate, async interaction => {
 
               updatedPartyEmbed = EmbedBuilder.from(partyEmbed).addFields(
                 {
-                  name: 'Tham gia',
-                  value: Array.from(registered.values()).join('\n') || 'NaN'
+                  name: `Tham gia (`+ registered.size.toString() +`)`,
+                  value: Array.from(registered.values()).join('\n') || 'NaN',
+                  inline: true
                 },
                 {
-                  name: 'Từ chối',
-                  value: Array.from(declined.values()).join('\n') || 'NaN'
+                  name: `Từ chối (`+ declined.size.toString() +`)`,
+                  value: Array.from(declined.values()).join('\n') || 'NaN',
+                  inline: true
                 }
               );
 
@@ -114,12 +123,14 @@ client.on(Events.InteractionCreate, async interaction => {
                 declined.set(collectorUserId, collectorUserNickname);
                 updatedPartyEmbed = EmbedBuilder.from(partyEmbed).addFields(
                   {
-                    name: 'Tham gia',
-                    value: Array.from(registered.values()).join('\n') || 'NaN'
+                    name: `Tham gia (`+ registered.size.toString() +`)`,
+                    value: Array.from(registered.values()).join('\n') || 'NaN',
+                    inline: true
                   },
                   {
-                    name: 'Từ chối',
-                    value: Array.from(declined.values()).join('\n') || 'NaN'
+                    name: `Từ chối (`+ declined.size.toString() +`)`,
+                    value: Array.from(declined.values()).join('\n') || 'NaN',
+                    inline: true
                   }
                 );
                 await i.update({
@@ -142,12 +153,12 @@ client.on(Events.InteractionCreate, async interaction => {
             }
 
             try {
-              await interaction.editReply({
+              await interaction.delete({
                 content: `Tổ đội đã giải tán!`,
                 embeds: [updatedPartyEmbed],
                 components: []
-              })
-              i.reply({ content: `${collectorUserNickname} đã giải tán tổ đội!` });
+              });
+              i.reply({ content: `${collectorUserNickname} đã giải tán tổ đội!`, embeds: [updatedPartyEmbed], components: []});
             } catch (err) {
               console.error(err);
               await i.reply({ content: `Có lỗi xảy ra trong quá trình giải tán tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
