@@ -46,7 +46,7 @@ module.exports = {
         }
         const maxPartySize = 12;
         const raidName = getRaidName(interaction.options.getString('name'));
-        const raidDesc = interaction.options.getString('description');
+        const raidDesc = interaction.options.getString('description') || 'Không có lưu ý nào được thêm vào.';
         const raidSize = interaction.options.getString('size') || maxPartySize;
 
         const commandUserNickname = interaction.member.nickname;
@@ -76,7 +76,7 @@ module.exports = {
 
         const partyEmbed = new EmbedBuilder()
             .setTitle(raidName)
-            .setDescription(raidDesc + `\nTổ đội tối đa của chuyến đi lần này là: ${raidSize} `)
+            .setDescription(raidDesc + `\nThành viên tối đa của tổ đội lần này là: ${raidSize} `)
             .setImage('https://i.ibb.co/SsbCBcC/image.png')
             .setFooter({ text: `Tổ đội được tạo bởi ${commandUserNickname}` });
 
