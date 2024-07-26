@@ -6,7 +6,7 @@ client.on(Events.ClientReady, () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
-const maxPartySize = 12;
+const maxPartySize = 2;
 
 client.on(Events.InteractionCreate, async interaction => {
 
@@ -22,6 +22,7 @@ client.on(Events.InteractionCreate, async interaction => {
     if (interaction.commandName === 'dungeon') {
       const registered = new Collection();
       const declined = new Collection();
+      const reserved = new Collection();
       let updatedPartyEmbed = new EmbedBuilder();
 
       const btnDataSet = new Collection();
@@ -69,13 +70,8 @@ client.on(Events.InteractionCreate, async interaction => {
 
           if (buttonName === 'btnAccept') {
 
-            if (registered.size >= 12) {
-              i.reply({ content: `${collectorUserNickname} ơi tổ đội đã đủ người rồi`, ephemeral: true });
-              return;
-            }
-
-            if (registered.has(collectorUserId)) {
-              i.reply({ content: 'Bạn đã tham gia rồi', ephemeral: true });
+            if (registered.has(collectorUserId) || reserved.has(collectorUserId)) {
+              await i.reply({ content: 'Bạn đã đăng ký tham gia rồi', ephemeral: true });
               return;
             }
 
@@ -85,82 +81,113 @@ client.on(Events.InteractionCreate, async interaction => {
                 declined.delete(collectorUserId);
               }
 
-              registered.set(collectorUserId, collectorUserNickname);
+              (registered.size >= maxPartySize) ? reserved.set(collectorUserId, collectorUserNickname) : registered.set(collectorUserId, collectorUserNickname);
 
               updatedPartyEmbed = EmbedBuilder.from(partyEmbed).addFields(
                 {
-                  name: `Tham gia (`+ registered.size.toString() +`)`,
+                  name: `Tham gia (` + registered.size.toString() + `)`,
                   value: Array.from(registered.values()).join('\n') || 'NaN',
                   inline: true
                 },
                 {
-                  name: `Từ chối (`+ declined.size.toString() +`)`,
-                  value: Array.from(declined.values()).join('\n') || 'NaN',
+                  name: `Dự bị (` + reserved.size.toString() + `)`,
+                  value: Array.from(reserved.values()).join('\n') || 'NaN',
                   inline: true
+                },
+                {
+                  name: `Từ chối (` + declined.size.toString() + `)`,
+                  value: Array.from(declined.values()).join('\n') || 'NaN',
+                  inline: false
                 }
               );
 
+              const msgContent = (registered.size >= maxPartySize) ? `${collectorUserNickname} đã tham gia danh sách dự bị` : `${collectorUserNickname} đã tham gia tổ đội`;
+
               await i.update({
-                content: `${collectorUserNickname} đã tham gia tổ đội`,
+                content: msgContent,
                 components: [partyRow],
                 embeds: [updatedPartyEmbed]
               });
+
             } catch (err) {
-              console.error(err);
+              console.log(`Error: ${err}`);
               await i.reply({ content: `Có lỗi xảy ra trong quá trình tham gia tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
             }
           }
 
           if (buttonName === 'btnDecline') {
             if (declined.has(collectorUserId)) {
-              i.reply({ content: `${collectorUserNickname} ơi bạn đã từ chối rồi`, ephemeral: true });
+              await i.reply({ content: `${collectorUserNickname} ơi bạn đã từ chối rồi`, ephemeral: true });
+              return;
             }
             try {
+              let withdraw = false;
+              let replacement = false;
+              if (reserved.has(collectorUserId)) {
+                reserved.delete(collectorUserId);
+              }
               if (registered.has(collectorUserId)) {
+                //remove user from register value
                 registered.delete(collectorUserId);
+                withdraw = true;
+
+                if (reserved.size != 0) {
+                  //register the next reserver
+                  const nextReservedId = reserved.keys().next().value;
+                  const nextReservedNickname = reserved.values().next().value;
+                  registered.set(nextReservedId, nextReservedNickname);
+                  //remove reserver from reserved list
+                  reserved.delete(nextReservedId);
+                  replacement = true;
+                }
               }
-              if (!declined.has(collectorUserId)) {
-                declined.set(collectorUserId, collectorUserNickname);
-                updatedPartyEmbed = EmbedBuilder.from(partyEmbed).addFields(
-                  {
-                    name: `Tham gia (`+ registered.size.toString() +`)`,
-                    value: Array.from(registered.values()).join('\n') || 'NaN',
-                    inline: true
-                  },
-                  {
-                    name: `Từ chối (`+ declined.size.toString() +`)`,
-                    value: Array.from(declined.values()).join('\n') || 'NaN',
-                    inline: true
-                  }
-                );
-                await i.update({
-                  content: `${collectorUserNickname} đã từ chối tổ đội!`,
-                  components: [partyRow],
-                  embeds: [updatedPartyEmbed]
-                });
-              }
+              declined.set(collectorUserId, collectorUserNickname);
+              updatedPartyEmbed = EmbedBuilder.from(partyEmbed).addFields(
+                {
+                  name: `Tham gia (` + registered.size.toString() + `)`,
+                  value: Array.from(registered.values()).join('\n') || 'NaN',
+                  inline: true
+                },
+                {
+                  name: `Dự bị (` + reserved.size.toString() + `)`,
+                  value: Array.from(reserved.values()).join('\n') || 'NaN',
+                  inline: true
+                },
+                {
+                  name: `Từ chối (` + declined.size.toString() + `)`,
+                  value: Array.from(declined.values()).join('\n') || 'NaN',
+                  inline: false
+                }
+              );
+              const msgContent = `${collectorUserNickname} ${replacement
+                  ? 'đã rút khỏi tổ đội nên một thành viên dự bị đã đăng ký sớm nhất sẽ được vào tổ đội chính!'
+                  : withdraw
+                    ? 'đã rút khỏi tổ đội!'
+                    : 'đã từ chối tổ đội!'
+                }`;
+              await i.update({
+                content: msgContent,
+                components: [partyRow],
+                embeds: [updatedPartyEmbed]
+              });
             }
             catch (err) {
-              console.error(err);
+              console.log(`Error: ${err}`);
               await i.reply({ content: `Có lỗi xảy ra trong quá trình từ chối tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
             }
           }
 
           if (buttonName === 'btnDismiss') {
             if (collectorUserId !== commandUserId) {
-              i.reply({ content: `${collectorUserNickname} ơi bạn không phải đội trưởng của tổ đội này nên bạn không thể giải tán nó được.`, ephemeral: true });
+              await i.reply({ content: `${collectorUserNickname} ơi bạn không phải đội trưởng của tổ đội này nên bạn không thể giải tán nó được.`, ephemeral: true });
               return;
             }
 
             try {
-              await interaction.delete({
-                content: `Tổ đội đã giải tán!`,
-                embeds: [updatedPartyEmbed],
-                components: []
-              });
-              i.reply({ content: `${collectorUserNickname} đã giải tán tổ đội!`, embeds: [updatedPartyEmbed], components: []});
+              await interaction.editReply({ content: `Tổ đội đã giải tán!`, embeds: [updatedPartyEmbed], components: [] });
+              await i.reply({ content: `${collectorUserNickname} đã giải tán tổ đội!`});
             } catch (err) {
-              console.error(err);
+              console.log(`Error: ${err}`);
               await i.reply({ content: `Có lỗi xảy ra trong quá trình giải tán tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
             }
           }
@@ -177,139 +204,17 @@ client.on(Events.InteractionCreate, async interaction => {
             });
           }
           catch (err) {
+            console.log(`Error: ${err}`);
             await interaction.reply({ content: `Có lỗi xảy ra trong quá trình kết thúc tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
           }
         })
       } catch (err) {
-        console.error(err);
+        console.log(`Error: ${err}`);
         await interaction.reply({ content: `Có lỗi xảy ra trong quá trình tạo tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
       }
-
-
-
     }
+    // end dungeon command
   }
-
-  // ACCEPT BUTTON
-
-  // if (interaction.isButton() && interaction.customId === 'btnAccept') {
-
-  //   // Prevent user to continue if user already registered
-  //   if (acceptedList.includes(inputUser)) {
-  //     await interaction.reply({ content: 'Bạn đã đăng ký tham gia rồi!', ephemeral: true });
-  //     return;
-  //   }
-
-  //   // Prevent user to continue if registered are full
-  //   if (acceptedList.length >= 12) {
-  //     await interaction.reply({ content: 'Tổ đội đã đủ người!', ephemeral: true });
-  //     return;
-  //   }
-
-  //   try {
-  //     acceptedList.push(inputUser);
-  //     // Remove user to the declinedList if exist
-  //     if (declinedList.includes(inputUser)) {
-  //       declinedList = declinedList.filter(m => m !== inputUser);
-  //     }
-
-  //     const printAccepted = acceptedList.join('\n') || 'NaN';
-  //     const printDeclined = declinedList.join('\n') || 'NaN';
-
-  //     const updatedEmbed = EmbedBuilder.from(partyEmbed).addFields(
-  //       {
-  //         name: "Đã tham gia",
-  //         value: printAccepted,
-  //         inline: true,
-  //       },
-  //       {
-  //         name: "Đã từ chối",
-  //         value: printDeclined,
-  //         inline: true,
-  //       }
-  //     );
-
-  //     await interaction.update({
-  //       content: `${inputUser} đã tham gia tổ đội.`,
-  //       components: [btnActionRow],
-  //       embeds: [updatedEmbed]
-  //     });s
-
-  //   }
-  //   catch (err) {
-  //     await interaction.reply({
-  //       content: `Đã có lỗi trong quá trình tham gia tổ đội, hãy cho Thiên Đạo biết nội dung lỗi sau đây nhé:\n${err}`,
-  //       ephemeral: true
-  //     });
-  //   }
-
-  // }
-
-  // Decline button
-
-  // if (interaction.isButton() && interaction.customId === 'btnDecline') {
-
-  //   // Prevent user to continue if user already declined
-  //   if (declinedList.includes(inputUser)) {
-  //     await interaction.reply({ content: 'Bạn đã từ chối tổ đội lần này!', ephemeral: true });
-  //     return;
-  //   }
-
-  //   try {
-  //     declinedList.push(inputUser);
-
-  //     // Remove user from 
-  //     if (acceptedList.includes(inputUser)) {
-  //       acceptedList = acceptedList.filter(m => m !== inputUser);
-  //     }
-
-  //     const printAccepted = acceptedList.join('\n').toString() || 'NaN';
-  //     const printDeclined = declinedList.join('\n').toString() || 'NaN';
-
-  //     const updatedEmbed = EmbedBuilder.from(partyEmbed).addFields(
-  //       {
-  //         name: "Đã tham gia",
-  //         value: printAccepted,
-  //         inline: true,
-  //       },
-  //       {
-  //         name: "Đã từ chối",
-  //         value: printDeclined,
-  //         inline: true,
-  //       });
-
-  //     await interaction.update({
-  //       content: `${inputUser} đã từ chối tham gia.`,
-  //       components: [btnActionRow],
-  //       embeds: [updatedEmbed]
-  //     });
-
-  //   } catch (err) {
-  //     await interaction.reply({
-  //       content: `Đã có lỗi trong quá trình tham từ chối, hãy cho Thiên Đạo biết nội dung lỗi sau đây nhé:\n${err}`,
-  //       ephemeral: true
-  //     });
-  //   }
-  // }
-
-  // Dismiss button
-
-  // if (interaction.isButton() && interaction.customId === 'btnDismiss') {
-  //   if (inputUser !== createdBy) {
-  //     await interaction.reply({ content: 'Bạn không phải là đội trưởng, bạn không thể giải tán đội này!', ephemeral: true });
-  //   } else {
-  //     acceptedList = [];
-  //     declinedList = [];
-  //     onGoing = false;
-  //     createdBy = '';
-  //     await interaction.update({
-  //       content: `${interaction.member.nickname} đã giải tán đội ngũ.`,
-  //       components: [],
-  //       embeds: []
-  //     })
-  //   }
-  // }
-
 });
 
 client.login(process.env.APP_TOKEN);
