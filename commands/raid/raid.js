@@ -210,22 +210,23 @@ module.exports = {
                 }
 
                 if (buttonName === 'btnDismiss') {
-                    if (collectorUserId !== commandUserId) {
+                    if (availableRoles.some(roleId => i.member.roles.cache.has(roleId)) || collectorUserId === commandUserId) {
+                        try {
+                            if (registered.size == 0 && declined.size == 0 && reserved.size == 0) {
+                                await interaction.editReply({ content: `Tổ đội đã giải tán!`, embeds: [partyEmbed], components: [] });
+                            } else {
+                                await interaction.editReply({ content: `Tổ đội đã giải tán!`, embeds: [updatedPartyEmbed], components: [] });
+                            }
+                            await i.reply({ content: `${collectorUserNickname} đã giải tán tổ đội!` });
+                        } catch (err) {
+                            console.log(`Error: ${err}`);
+                            await i.reply({ content: `Có lỗi xảy ra trong quá trình giải tán tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
+                        }
+                    } else {
                         await i.reply({ content: `${collectorUserNickname} ơi bạn không phải đội trưởng của tổ đội này nên bạn không thể giải tán nó được.`, ephemeral: true });
-                        return;
                     }
 
-                    try {
-                        if(registered.size == 0 && declined.size == 0 && reserved.size == 0) {
-                            await interaction.editReply({ content: `Tổ đội đã giải tán!`, embeds: [partyEmbed], components: [] });
-                        } else {
-                            await interaction.editReply({ content: `Tổ đội đã giải tán!`, embeds: [updatedPartyEmbed], components: [] });
-                        }
-                        await i.reply({ content: `${collectorUserNickname} đã giải tán tổ đội!` });
-                    } catch (err) {
-                        console.log(`Error: ${err}`);
-                        await i.reply({ content: `Có lỗi xảy ra trong quá trình giải tán tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
-                    }
+
                 }
 
             });
@@ -240,10 +241,10 @@ module.exports = {
                     })
                 }
                 catch (err) {
-                        console.log(`Error: ${err}`);
-                        await interaction.reply({ content: `Có lỗi xảy ra trong quá trình kết thúc tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
-                    }
-                })
+                    console.log(`Error: ${err}`);
+                    await interaction.reply({ content: `Có lỗi xảy ra trong quá trình kết thúc tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
+                }
+            })
         } catch (err) {
             console.log(`Error: ${err}`);
             await interaction.reply({ content: `Có lỗi xảy ra trong quá trình tạo tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
