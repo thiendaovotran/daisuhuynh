@@ -15,6 +15,36 @@ const availableRoles = ['1151505566510886922', '1125674304621785108', '115974628
 // 1125674304621785108 chấp pháp giả
 // 1159746286258491392 đường chủ
 
+const classRoles = ['1125686423996084315', '1125686633254096947', '1125686698844639252',
+     '1139479014738755674', '1125685368654676029', '1125686502622507078', '1125686775046754314', '1240969487847653438'];
+
+// 1125686423996084315 tố vấn
+// 1125686633254096947 toái mộng
+// 1125686698844639252 thần tương
+// 1139479014738755674 long ngâm
+// 1125685368654676029 thiết y
+// 1125686502622507078 huyết hà
+// 1125686775046754314 cửu linh
+// 1240969487847653438 huyền cơ
+
+const classIcon = new Map();
+classIcon.set('1125686775046754314', '1270665633931067492');
+classIcon.set('1240969487847653438', '1270665635839348849');
+classIcon.set('1125686502622507078', '1270665637986963456');
+classIcon.set('1139479014738755674', '1270665639941505146');
+classIcon.set('1125686698844639252', '1270665646048415826');
+classIcon.set('1125685368654676029', '1270665647776464941');
+classIcon.set('1125686633254096947', '1270665641787002991');
+classIcon.set('1125686423996084315', '1270665644312105052');
+// 1270665633931067492 Cửu Linh
+// 1270665635839348849 Huyền Cơ
+// 1270665637986963456 Huyết Hà
+// 1270665639941505146 Long Ngâm
+// 1270665646048415826 Thần Tương
+// 1270665647776464941 Thiết Ý
+// 1270665641787002991 Toái Mộng
+// 1270665644312105052 Tố Vấn
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('raid')
@@ -48,7 +78,7 @@ module.exports = {
         const raidName = getRaidName(interaction.options.getString('name'));
         const raidSize = interaction.options.getString('size') || maxPartySize;
 
-        const commandUserNickname = interaction.member.nickname;
+        // const commandUserNickname = interaction.member.nickname;
         const commandUserId = interaction.member.id;
 
         const registered = new Collection();
@@ -97,13 +127,23 @@ module.exports = {
 
                 const collectorUserId = i.member.id;
                 const collectorUserNickname = i.member.nickname;
+                const collectorUserRoles = i.member.roles.cache.map(role=>role.id);
+                // console.log(JSON.stringify(collectorUserRoles, null, 2));
+                // console.log(JSON.stringify(classRoles, null, 2));
+
+                const userClassRoleId = collectorUserRoles.filter(e => classRoles.includes(e));
+                const userClassIconId = classIcon.get(userClassRoleId[0]);
+                const userClassIconName = i.guild.emojis.cache.get(userClassIconId).name;
+                
+                console.log(JSON.stringify(userClassIconId, null, 2));
+                console.log(JSON.stringify(userClassIconName, null, 2));
 
                 const buttonName = i.customId;
 
                 if (buttonName === 'btnAccept') {
 
                     if (registered.has(collectorUserId) || reserved.has(collectorUserId)) {
-                        await i.reply({ content: 'Ngươi đã đăng ký tham gia rồi', ephemeral: true });
+                        await i.reply({ content: `Ngươi đã đăng ký tham gia rồi`, ephemeral: true });
                         return;
                     }
 
@@ -113,12 +153,12 @@ module.exports = {
                             declined.delete(collectorUserId);
                         }
 
-                        (registered.size >= raidSize) ? reserved.set(collectorUserId, collectorUserNickname) : registered.set(collectorUserId, collectorUserNickname);
+                        (registered.size >= raidSize) ? reserved.set(collectorUserId, `<:${userClassIconName}:${userClassIconId}> ${collectorUserNickname}`) : registered.set(collectorUserId, `<:${userClassIconName}:${userClassIconId}> ${collectorUserNickname}`);
 
                         updatedPartyEmbed = EmbedBuilder.from(partyEmbed).addFields(
                             {
                                 name: `Tham gia (` + registered.size.toString() + `)`,
-                                value: Array.from(registered.values()).join('\n') || '...',
+                                value: Array.from(registered.values()).join(`\n`) || '...',
                                 inline: true
                             },
                             {
@@ -129,7 +169,7 @@ module.exports = {
                             {
                                 name: `Từ chối (` + declined.size.toString() + `)`,
                                 value: Array.from(declined.values()).join('\n') || '...',
-                                inline: true
+                                inline: false
                             }
                         );
 
@@ -175,7 +215,7 @@ module.exports = {
                                 replacement = true;
                             }
                         }
-                        declined.set(collectorUserId, collectorUserNickname);
+                        declined.set(collectorUserId, `<:${userClassIconName}:${userClassIconId}> ${collectorUserNickname}`);
                         updatedPartyEmbed = EmbedBuilder.from(partyEmbed).addFields(
                             {
                                 name: `Tham gia (` + registered.size.toString() + `)`,
@@ -190,7 +230,7 @@ module.exports = {
                             {
                                 name: `Từ chối (` + declined.size.toString() + `)`,
                                 value: Array.from(declined.values()).join('\n') || '...',
-                                inline: true
+                                inline: false
                             }
                         );
                         if(!withdraw && !replacement) {
