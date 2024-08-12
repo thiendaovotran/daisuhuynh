@@ -128,15 +128,14 @@ module.exports = {
                 const collectorUserId = i.member.id;
                 const collectorUserNickname = i.member.nickname;
                 const collectorUserRoles = i.member.roles.cache.map(role=>role.id);
-                // console.log(JSON.stringify(collectorUserRoles, null, 2));
-                // console.log(JSON.stringify(classRoles, null, 2));
 
                 const userClassRoleId = collectorUserRoles.filter(e => classRoles.includes(e));
+                if(userClassRoleId.length === 0) {
+                    await i.reply({ content: `Ngươi hình như không môn không phái, hãy suy nghĩ bản thân thuộc môn phái nào trước đã!`, ephemeral: true });
+                    return;
+                }
                 const userClassIconId = classIcon.get(userClassRoleId[0]);
                 const userClassIconName = i.guild.emojis.cache.get(userClassIconId).name;
-                
-                console.log(JSON.stringify(userClassIconId, null, 2));
-                console.log(JSON.stringify(userClassIconName, null, 2));
 
                 const buttonName = i.customId;
 
