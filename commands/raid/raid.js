@@ -6,8 +6,8 @@ const raidList = [
 ];
 
 function getRaidName(raidId) {
-    const raid = raidList.filter(e => e.id === raidId);
-    return (raid) ? raid[0].name : 'Không tìm thấy phó bản'
+    const raid = raidList.find(item => item.id === raidId);
+    return (raid) ? raid.name : 'Không tìm thấy phó bản'
 }
 
 const availableRoles = ['1151505566510886922', '1125674304621785108', '1159746286258491392'];
@@ -16,7 +16,7 @@ const availableRoles = ['1151505566510886922', '1125674304621785108', '115974628
 // 1159746286258491392 đường chủ
 
 const classRoles = ['1125686423996084315', '1125686633254096947', '1125686698844639252',
-     '1139479014738755674', '1125685368654676029', '1125686502622507078', '1125686775046754314', '1240969487847653438'];
+    '1139479014738755674', '1125685368654676029', '1125686502622507078', '1125686775046754314', '1240969487847653438'];
 
 // 1125686423996084315 tố vấn
 // 1125686633254096947 toái mộng
@@ -58,7 +58,7 @@ module.exports = {
                     { name: 'Thiên Cơ Mê Thành (Nội Thành)', value: 'tcmt2' }
                 )
         )
-        .addRoleOption(option=>
+        .addRoleOption(option =>
             option.setName('role')
                 .setDescription('Chọn nhóm (role) mà ngươi muốn tuyển')
                 .setRequired(true)
@@ -91,24 +91,21 @@ module.exports = {
         btnDataSet.set('btnDecline', { label: 'Từ chối', style: ButtonStyle.Secondary });
         btnDataSet.set('btnDismiss', { label: 'Giải tán', style: ButtonStyle.Danger });
 
-        const partyRow = new ActionRowBuilder();
-
-        btnDataSet.forEach((value, key) => {
-            const { label, style } = value;
-            partyRow.addComponents(
+        const partyRow = new ActionRowBuilder().addComponents(
+            btnDataSet.map(({ label, style }, key) =>
                 new ButtonBuilder()
                     .setCustomId(key)
                     .setLabel(label)
                     .setStyle(style)
-            );
-        });
+            )
+        );
 
         const partyEmbed = new EmbedBuilder()
             .setTitle(raidName)
             .setDescription(`Một tổ đội yêu cầu **${raidSize}** người tham gia phó bản **${raidName}** đã được tạo bởi <@${commandUserId}>. Chư vị trong <@&${role.id}> hãy mau mau nhanh chóng báo danh!`)
-            .addFields({  name: 'Lưu ý', value: 'Nếu đã đủ số lượng người tham gia, chư vị sẽ được thêm vào danh sách dự bị để ưu tiên đi lượt thứ hai'})
+            .addFields({ name: 'Lưu ý', value: 'Nếu đã đủ số lượng người tham gia, chư vị sẽ được thêm vào danh sách dự bị để ưu tiên đi lượt thứ hai' })
             .setImage('https://i.ibb.co/SsbCBcC/image.png')
-            .setFooter({ text: `Bấm vào các nút bên dưới để tham gia\nChỉ có đội trưởng mới được Giải tán tổ đội`});
+            .setFooter({ text: `Bấm vào các nút bên dưới để tham gia\nChỉ có đội trưởng mới được Giải tán tổ đội` });
 
         try {
             const partyMsg = await interaction.reply({
@@ -121,16 +118,16 @@ module.exports = {
 
             const filter = interaction => interaction.customId === 'btnAccept' || interaction.customId === 'btnDecline' || interaction.customId === 'btnDismiss';
 
-            const partyCollector = partyMsg.createMessageComponentCollector({ filter });
+            const partyCollector = partyMsg.createMessageComponentCollector({ filter, time: 60000 });
 
             partyCollector.on('collect', async i => {
 
                 const collectorUserId = i.member.id;
                 const collectorUserNickname = i.member.nickname;
-                const collectorUserRoles = i.member.roles.cache.map(role=>role.id);
+                const collectorUserRoles = i.member.roles.cache.map(role => role.id);
 
                 const userClassRoleId = collectorUserRoles.filter(e => classRoles.includes(e));
-                if(userClassRoleId.length === 0) {
+                if (userClassRoleId.length === 0) {
                     await i.reply({ content: `Ngươi hình như không môn không phái, hãy suy nghĩ bản thân thuộc môn phái nào trước đã!`, ephemeral: true });
                     return;
                 }
@@ -181,8 +178,7 @@ module.exports = {
                         });
 
                     } catch (err) {
-                        console.dir(err);
-                        await i.reply({ content: `Có lỗi xảy ra trong quá trình tham gia tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
+                        sendErrorMessage(i, 'tham gia tổ đội', err);
                     }
                 }
 
@@ -232,7 +228,7 @@ module.exports = {
                                 inline: false
                             }
                         );
-                        if(!withdraw && !replacement) {
+                        if (!withdraw && !replacement) {
                             const msgContent = `<@${collectorUserId}> đã từ chối tham gia`;
                             await i.update({
                                 content: msgContent,
@@ -249,8 +245,7 @@ module.exports = {
                         }
                     }
                     catch (err) {
-                        console.dir(err);
-                        await i.reply({ content: `Có lỗi xảy ra trong quá trình từ chối tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
+                        sendErrorMessage(i, 'từ chối tổ đội', err);
                     }
                 }
 
@@ -267,8 +262,7 @@ module.exports = {
                                 await interaction.editReply({ content: `<@${i.member.id}> đã giải tán tổ đội!`, embeds: [updatedPartyEmbed], components: [] });
                             }
                         } catch (err) {
-                            console.dir(err);
-                            await i.reply({ content: `Có lỗi xảy ra trong quá trình giải tán tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
+                            sendErrorMessage(i, 'giải tán tổ đội', err);
                         }
                     }
 
@@ -278,22 +272,29 @@ module.exports = {
             });
 
             partyCollector.on('end', async collectedData => {
-                console.log(`${collectedData.size} items was collected.`);
+                // console.log(`${collectedData.size} items was collected.`);
+                console.log(collectedData);
                 try {
                     await interaction.editReply({
                         content: `Tổ đội đã giải tán!`,
                         embeds: [updatedPartyEmbed],
                         components: []
                     })
+                    
                 }
                 catch (err) {
-                    console.dir(err);
-                    await interaction.reply({ content: `Có lỗi xảy ra trong quá trình kết thúc tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
+                    sendErrorMessage(interaction, 'giải tán tổ đội', err);
                 }
             })
         } catch (err) {
-            console.log(err);
-            await interaction.reply({ content: `Có lỗi xảy ra trong quá trình tạo tổ đội, copy nội dung bên dưới gửi cho Thiên Đạo nhé, cám ơn ạ!\n${err}`, ephemeral: true });
+            sendErrorMessage(interaction, 'tạo tổ đội', err);
         }
     },
 };
+
+async function sendErrorMessage(interaction, context, error) {
+    await interaction.reply({
+        content: `Có lỗi khi đang ${context}, gửi nội dung dưới đây cho Thiên Đạo đi ạ\n${error}`,
+        ephemeral: true
+    });
+}
