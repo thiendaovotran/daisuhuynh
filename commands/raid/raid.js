@@ -118,7 +118,7 @@ module.exports = {
 
             const filter = interaction => interaction.customId === 'btnAccept' || interaction.customId === 'btnDecline' || interaction.customId === 'btnDismiss';
 
-            const partyCollector = partyMsg.createMessageComponentCollector({ filter, time: 60000 });
+            const partyCollector = partyMsg.createMessageComponentCollector({ filter, time: 21600000 });
 
             partyCollector.on('collect', async i => {
 
