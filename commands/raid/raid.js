@@ -119,6 +119,7 @@ module.exports = {
             const filter = interaction => interaction.customId === 'btnAccept' || interaction.customId === 'btnDecline' || interaction.customId === 'btnDismiss';
 
             const partyCollector = partyMsg.createMessageComponentCollector({ filter, time: 21600000 });
+            // 21600000
 
             partyCollector.on('collect', async i => {
 
@@ -272,15 +273,12 @@ module.exports = {
             });
 
             partyCollector.on('end', async collectedData => {
-                // console.log(`${collectedData.size} items was collected.`);
-                console.log(collectedData);
                 try {
                     await interaction.editReply({
                         content: `Tổ đội đã giải tán!`,
                         embeds: [updatedPartyEmbed],
                         components: []
-                    })
-                    
+                    });
                 }
                 catch (err) {
                     sendErrorMessage(interaction, 'giải tán tổ đội', err);
