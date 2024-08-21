@@ -77,6 +77,8 @@ module.exports = {
         const role = interaction.options.getRole('role');
         const raidName = getRaidName(interaction.options.getString('name'));
         const raidSize = interaction.options.getString('size') || maxPartySize;
+        const PARTY_DURATION = 21600000;
+        // 21600000
 
         // const commandUserNickname = interaction.member.nickname;
         const commandUserId = interaction.member.id;
@@ -118,8 +120,7 @@ module.exports = {
 
             const filter = interaction => interaction.customId === 'btnAccept' || interaction.customId === 'btnDecline' || interaction.customId === 'btnDismiss';
 
-            const partyCollector = partyMsg.createMessageComponentCollector({ filter, time: 21600000 });
-            // 21600000
+            const partyCollector = partyMsg.createMessageComponentCollector({ filter, time: PARTY_DURATION });
 
             partyCollector.on('collect', async i => {
 
@@ -262,6 +263,7 @@ module.exports = {
                             } else {
                                 await interaction.editReply({ content: `<@${i.member.id}> đã giải tán tổ đội!`, embeds: [updatedPartyEmbed], components: [] });
                             }
+                        partyCollector.stop();
                         } catch (err) {
                             sendErrorMessage(i, 'giải tán tổ đội', err);
                         }
@@ -272,13 +274,18 @@ module.exports = {
 
             });
 
-            partyCollector.on('end', async collectedData => {
+            partyCollector.on('end', async (collected,  reason) => {
                 try {
                     await interaction.editReply({
-                        content: `Tổ đội đã giải tán!`,
+                        content: `Tổ đội đã được giải tán!`,
                         embeds: [updatedPartyEmbed],
                         components: []
                     });
+                    if (reason === 'time') {
+                        await interaction.followUp({ content: `Tổ đội giải tán do quá thời gian tuyển dụng (6 tiếng)`, ephemeral: false });
+                    } else if (reason === 'user') {
+                        await interaction.followUp({ content: `Tổ đội giải tán bởi đội trưởng`, ephemeral: false });
+                    }
                 }
                 catch (err) {
                     sendErrorMessage(interaction, 'giải tán tổ đội', err);
